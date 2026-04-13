@@ -1,49 +1,57 @@
 # NEXUS: Agentic DeFi Intelligence Layer
+> Technical General Championship 2026 — PancakeSwap × IIT Roorkee
 
-NEXUS is a multi-agent TypeScript monorepo for autonomous PancakeSwap opportunity detection, risk-gated execution, and live portfolio telemetry.
+NEXUS is a multi-agent AI system that autonomously identifies and executes trading opportunities on PancakeSwap across BNB Chain, Ethereum, and Arbitrum. The system delegates responsibilities across a 7-agent network for polling data, validating risk limits, generating signals, calculating live PnL, and routing native transactions on testnet.
 
-## Architecture
+## Team Members
+
+| Person | Role | Owns |
+|--------|------|------|
+| **Person 1** | Data & Intelligence | `@pancakeswap-agent/market-intelligence`, `@pancakeswap-agent/liquidity` |
+| **Person 2** | Strategy & Execution | `@pancakeswap-agent/strategy`, `@pancakeswap-agent/execution` |
+| **Person 3** | Risk & Portfolio | `@pancakeswap-agent/risk`, `@pancakeswap-agent/portfolio`, `dashboard` |
+
+## Architecture Overview
+
+The system strictly avoids hard coupling. All agents communicate blindly over the **NEXUS Orchestrator Base** (a native TypeScript `EventEmitter` messaging bus) to enforce separation of concerns and robust async error isolation.
 
 ```text
-Market Intelligence Agent
-   -> emits market:update
-
-Strategy Agent
-   -> consumes market:update
-   -> emits strategy:signal
-
-Risk Agent
-   -> consumes market:update, strategy:signal, execution:trade
-   -> emits risk:decision and risk:circuit_break
-
-Execution Agent
-   -> consumes strategy:signal, risk:decision, market:update
-   -> emits execution:trade
-
-Portfolio Agent
-   -> consumes execution:trade, market:update, risk:circuit_break, agent:status
-   -> serves REST + WebSocket API for dashboard
-
-Dashboard (React + Vite)
-   -> reads /api/* and WebSocket feed for live terminal UI
+Market Intelligence Agent (P1)
+    └─ publishes market_state → Orchestrator
+            ├─ Strategy Agent (P2) reads market_state, emits trade signals
+            ├─ Execution Agent (P2) executes approved trades on-chain
+            ├─ Portfolio Agent (P3) logs all trades, computes P&L
+            └─ Risk Agent (P3) approves / vetoes every trade
 ```
+
+## Working Mechanics (The 5-Step Loop)
+
+1. The **Market Intelligence** module actively pulls subgraphs over viem to construct a pristine `MarketState` payload detailing all pool configurations, reserves, and real-time gas prices.
+2. The **Strategy Agent** natively listens to `market:update`. If an Arbitrage condition evaluates positive (Accounting for Slippage + Gas cost thresholds), it fires a `strategy:signal` into the Orchestrator.
+3. The **Risk Circuit-Breaker** catches the signal, verifying that total position size < $500, expected drawdowns are safe, and the macro-market conditions aren't inherently anomalous.
+4. Upon receiving `risk:decision { approved: true }`, the **Execution Agent** routes a live Swap signature to PancakeSwap V3 on testnet.
+5. Finally, the **Portfolio & Dashboard Layer** captures the EVM Receipt `execution:trade` payload to compute Sharpe Ratios and broadcast real-time metrics over WebSockets to the React User Interface.
+
+## Deployment Address
+
+**Environment**: `BSC Testnet`
+*Smart Contracts are currently localized into `packages/contracts` via Foundry and will be natively mapped and deployed (TBD) prior to hackathon mainnet presentation.*
 
 ## Repository Layout
 
 ```text
 packages/
-   core/
+   core/                 # Typed definitions and Orchestrator Base
    agents/
-      market-intelligence/
-      liquidity/
-      strategy/
-      execution/
-      risk/
-      portfolio/
-   dashboard/
-contracts/
-infra/
-docs/
+      market-intelligence/ # P1 Graph Polling
+      liquidity/           # P1 Impermanent Loss estimations
+      strategy/            # P2 Arbitrage Conditionals
+      execution/           # P2 Viem Routing
+      risk/                # P3 Firewall Circuit Breakers
+      portfolio/           # P3 Trade Ledgers and API
+   dashboard/            # P3 Vite + React Front-end UI
+contracts/               # Forge Foundry Smart Contracts
+docs/                    # Project guidelines and audit matrices
 ```
 
 ## Quick Start
@@ -54,115 +62,21 @@ docs/
 npm install
 ```
 
-2. Copy environment file:
+2. Configure environment:
 
 ```bash
 cp .env.example .env
+# Ensure RPC_URL_BSC, PRIVATE_KEY, and PANCAKESWAP_SUBGRAPH_URL are populated
 ```
 
-3. Build all workspace packages:
+3. Boot all workspace packages concurrently OR natively isolate agents:
 
 ```bash
-npm run build
+npm run start --workspaces
 ```
 
-4. Run all app agents and UI (dev mode):
-
-```bash
-npm run dev:all
-```
-
-5. Open dashboard:
+5. Open dashboard to view the Real-Time live PnL UI terminal:
 
 ```text
 http://localhost:5173
 ```
-
-## Contracts
-
-Compile, test, and export ABI files:
-
-```bash
-cd contracts
-npm install
-npx hardhat compile
-npx hardhat test
-npx tsx scripts/export-abis.ts
-```
-
-Generated ABIs:
-
-- `contracts/abis/NexusVault.json`
-- `contracts/abis/SignalRegistry.json`
-- `contracts/abis/AgentLeaderboard.json`
-
-## Testing
-
-Run workspace tests:
-
-```bash
-npm run test
-```
-
-Run package tests directly:
-
-```bash
-npm run test --workspace=@pancakeswap-agent/risk
-npm run test --workspace=@pancakeswap-agent/portfolio
-npm run test --workspace=@pancakeswap-agent/strategy
-npm run test --workspace=@pancakeswap-agent/liquidity
-```
-
-Run contract tests:
-
-```bash
-cd contracts && npx hardhat test
-```
-
-## Dashboard Pages
-
-- `/` dashboard command center with KPI strip, equity chart, activity feed
-- `/trades` tabular trade history
-- `/analytics` metrics snapshot and performance detail
-- `/agents` agent health/state visibility
-- `/positions` open position surface
-- `/risk` risk status and circuit breaker state
-- `/market` live market-state surface
-
-## Key Interface Contracts
-
-Shared runtime types live in `packages/core/src/types.ts`:
-
-- `MarketState`
-- `TradeSignal`
-- `RiskDecision`
-- `TradeEvent`
-- `PortfolioSnapshot`
-- `AgentStatus`
-
-Shared event bus lives in `packages/core/src/orchestrator.ts`.
-
-## Environment Variables
-
-Required:
-
-- `RPC_URL_BSC`
-- `PRIVATE_KEY`
-- `WALLET_ADDRESS`
-- `PANCAKESWAP_SUBGRAPH_URL`
-- `CHAIN_ID`
-
-Optional:
-
-- `RPC_URL_ARB`
-- `POLLING_INTERVAL_MS`
-- `PORTFOLIO_API_PORT`
-- `NEXUS_VAULT_ADDRESS`
-- `SIGNAL_REGISTRY_ADDRESS`
-- `AGENT_LEADERBOARD_ADDRESS`
-
-## Security Notes
-
-- Never commit real private keys.
-- Keep execution on testnet while validating.
-- Risk agent decisions are required before execution.
