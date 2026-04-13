@@ -151,7 +151,7 @@ export function startExecutionAgent() {
         recipient: env.WALLET_ADDRESS ?? fallbackRecipient,
       });
 
-      const gasUsedUSD = estimateGasCostUSD(3.0);
+      const gasUsedUSD = estimateGasCostUSD(latestMarketState?.gasPriceGwei ?? 3.0);
       const grossProfitUSD = Math.max(signal.expectedProfitUSD, quotedOutputUsd - signal.sizeUSD, 0);
       const tradeEvent: TradeEvent = {
         txHash,

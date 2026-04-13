@@ -1,5 +1,4 @@
 import { orchestratorBus, publishError, MarketState, TradeEvent } from '@pancakeswap-agent/core';
-import { getRiskState } from '@pancakeswap-agent/risk/src/index';
 import { createPortfolioApiServer, loadPortfolioStateFromTrades, PortfolioApiState } from './api_server';
 import { calculatePortfolioMetrics } from './metrics';
 import { appendTrade, getAllTrades } from './trade_ledger';
@@ -22,30 +21,28 @@ export async function startPortfolioAgent() {
   apiState = await loadPortfolioStateFromTrades();
   const server = createPortfolioApiServer(apiState);
 
-  const syncRiskState = () => {
-    const riskState = getRiskState();
-    apiState!.riskStatus = {
-      isPaused: riskState.isPaused,
-      drawdownPct: riskState.drawdownPct,
+  orchestratorBus.on('market:update', (state) => {
+    latestMarketState = state;
+    apiState!.marketState = state;
+    server.broadcast({ type: 'market_update', data: state });
+  });
+
+  orchestratorBus.on('risk:state', (state) => {
+    if (!apiState) return;
+    apiState.riskStatus = {
+      isPaused: state.isPaused,
+      drawdownPct: state.drawdownPct,
     };
-    apiState!.positions = riskState.positions.map((position) => ({
+    apiState.positions = state.positions.map((position: any) => ({
       pair: position.pair,
       sizeUSD: position.sizeUSD,
       entryPrice: position.entryPrice,
       timestamp: position.timestamp,
     }));
-  };
-
-  orchestratorBus.on('market:update', (state) => {
-    latestMarketState = state;
-    apiState!.marketState = state;
-    syncRiskState();
-    server.broadcast({ type: 'market_update', data: state });
   });
 
   orchestratorBus.on('risk:circuit_break', (payload) => {
     apiState!.riskStatus = { isPaused: true, drawdownPct: payload.drawdownPct };
-    syncRiskState();
     server.broadcast({ type: 'risk_alert', data: payload });
   });
 
@@ -69,7 +66,6 @@ export async function startPortfolioAgent() {
         poolAddress: trade.poolAddress,
       });
       await refreshMetrics();
-      syncRiskState();
       server.broadcast({ type: 'trade', data: trade });
       server.broadcast({ type: 'metrics', data: apiState!.metrics });
     } catch (error) {
@@ -82,13 +78,12 @@ export async function startPortfolioAgent() {
   });
 
   orchestratorBus.on('portfolio:snapshot', () => {
-    syncRiskState();
+    // Sync points handled by risk:state and metrics refresh
   });
 
-  syncRiskState();
-
-  server.server.listen(3001, () => {
-    console.log('[Portfolio Agent] API listening on port 3001');
+  const port = process.env.PORTFOLIO_API_PORT || 3001;
+  server.server.listen(port, () => {
+    console.log(`[Portfolio Agent] API listening on port ${port}`);
   });
 
   return server;

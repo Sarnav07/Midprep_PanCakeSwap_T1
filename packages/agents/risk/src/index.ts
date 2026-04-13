@@ -125,6 +125,11 @@ export function startRiskAgent() {
 
   snapshotTimer = setInterval(() => {
     const state = getRiskState();
+    orchestratorBus.emit('risk:state', {
+      isPaused: state.isPaused,
+      drawdownPct: state.drawdownPct,
+      positions: state.positions,
+    });
     orchestratorBus.emit('portfolio:snapshot', {
       timestamp: Date.now(),
       equityUSD: 1000,
@@ -132,7 +137,7 @@ export function startRiskAgent() {
       openPositions: state.positionCount,
       totalTrades: state.positionCount,
     });
-  }, 60_000);
+  }, 30_000);
 }
 
 export function getRiskState() {

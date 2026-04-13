@@ -10,6 +10,7 @@ export interface AgentEvents {
   'risk:circuit_break': (payload: { triggeredAt: number; drawdownPct: number; reason: string }) => void;
   'portfolio:snapshot': (snapshot: PortfolioSnapshot) => void;
   'agent:status': (status: AgentStatus) => void;
+  'risk:state': (state: { isPaused: boolean; drawdownPct: number; positions: any[] }) => void;
   'error': (error: Error) => void;
 }
 
