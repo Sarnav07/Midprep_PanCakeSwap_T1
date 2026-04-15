@@ -1,12 +1,11 @@
 {
-  "name": "@pancakeswap-agent/liquidity",
+  "name": "@pancakeswap-agent/simulation",
   "version": "1.0.0",
   "main": "src/index.ts",
   "private": true,
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/index.ts",
-    "dev": "ts-node src/index.ts",
     "lint": "tsc --noEmit",
     "test": "vitest run"
   },

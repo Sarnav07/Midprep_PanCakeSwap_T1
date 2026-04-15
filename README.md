@@ -54,29 +54,18 @@ contracts/               # Forge Foundry Smart Contracts
 docs/                    # Project guidelines and audit matrices
 ```
 
-## Quick Start
+## Running the System
 
-1. Install root dependencies:
+### Prerequisites
+- Node.js 18+
+- `.env` configured from `.env.example`
 
-```bash
-npm install
-```
+### Start Everything
+bash ./start.sh
 
-2. Configure environment:
+### Dashboard
+Open http://localhost:5173 after running start.sh
 
-```bash
-cp .env.example .env
-# Ensure RPC_URL_BSC, PRIVATE_KEY, and PANCAKESWAP_SUBGRAPH_URL are populated
-```
-
-3. Boot all workspace packages concurrently OR natively isolate agents:
-
-```bash
-npm run start --workspaces
-```
-
-5. Open dashboard to view the Real-Time live PnL UI terminal:
-
-```text
-http://localhost:5173
-```
+### Testnet Config
+System runs on BSC Testnet (Chain ID 97) by default.
+To switch to mainnet: update `chain` import in execution agent and update router addresses.

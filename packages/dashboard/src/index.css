@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Variables ─────────────────────────────────────────────────────────── */
+:root {
+  --bg-primary:    #080b12;
+  --bg-card:       rgba(13, 18, 30, 0.9);
+  --bg-card-hover: rgba(18, 25, 42, 0.95);
+  --border-dim:    rgba(0, 229, 255, 0.08);
+  --border-accent: rgba(0, 229, 255, 0.25);
+  --cyan:          #00e5ff;
+  --cyan-dim:      rgba(0, 229, 255, 0.6);
+  --magenta:       #ff2d78;
+  --purple:        #a855f7;
+  --green:         #00ff88;
+  --amber:         #f59e0b;
+  --red:           #ff4444;
+  --text-primary:  #e8eaf0;
+  --text-secondary:#7a8499;
+  --text-muted:    #3d4558;
+  --font-mono:     'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Base Reset ────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Custom Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 4px; height: 4px; background: var(--bg-primary); }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--border-accent); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+* { scrollbar-width: thin; scrollbar-color: var(--border-accent) transparent; }
+
+/* ── Typography Helpers ────────────────────────────────────────────────────── */
+.font-mono     { font-family: var(--font-mono) !important; }
+.label-caps    { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-family: var(--font-mono); }
+.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.25em; font-weight: 700; }
+
+/* ── Interactive Card Hover ────────────────────────────────────────────────── */
+.hover-lift {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-accent) !important;
+  box-shadow: 0 8px 30px rgba(0,229,255,0.06);
+}
+
+/* ── Button Tap Effect ─────────────────────────────────────────────────────── */
+button:active { transform: scale(0.98); }
+
+/* ── Scanline overlay ──────────────────────────────────────────────────────── */
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.015) 2px,
+    rgba(0,0,0,0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Pulsing dot ───────────────────────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+  50%       { opacity: 0.8; box-shadow: 0 0 0 6px rgba(0, 255, 136, 0); }
+}
+.pulse-dot { animation: pulse-dot 2s infinite; }
+
+/* ── NEXUS logo glow ───────────────────────────────────────────────────────── */
+@keyframes nexus-glow {
+  0%, 100% { text-shadow: 0 0 8px var(--cyan), 0 0 20px rgba(0,229,255,0.3); }
+  50%       { text-shadow: 0 0 16px var(--cyan), 0 0 50px rgba(0,229,255,0.5); }
+}
+.nexus-glow { animation: nexus-glow 3s ease-in-out infinite; }
+
+/* ── Responsive mobile: stack all 2-col grids ──────────────────────────────── */
+@media (max-width: 768px) {
+  .xl-grid-30 { grid-template-columns: 1fr !important; }
+
+  /* Hide right sidebar panels on mobile */
+  .sidebar-hide-mobile { display: none !important; }
+
+  /* Tighter padding on mobile */
+  .max-w-\[1400px\] { padding-left: 1rem; padding-right: 1rem; }
+}
