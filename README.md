@@ -1,71 +1,166 @@
-# NEXUS: Agentic DeFi Intelligence Layer
-> Technical General Championship 2026 — PancakeSwap × IIT Roorkee
+# NEXUS — Autonomous Multi-Agent Trading System
 
-NEXUS is a multi-agent AI system that autonomously identifies and executes trading opportunities on PancakeSwap across BNB Chain, Ethereum, and Arbitrum. The system delegates responsibilities across a 7-agent network for polling data, validating risk limits, generating signals, calculating live PnL, and routing native transactions on testnet.
+> **Technical General Championship 2026 — PancakeSwap × IIT Roorkee**
 
-## Team Members
+NEXUS is a cyberpunk-aesthetic, multi-agent AI trading dashboard built for PancakeSwap on BNB Chain (BSC Testnet). It implements cross-pool arbitrage detection, real-time risk management, and autonomous trade execution across a 7-agent event-driven architecture — all visualised through a high-fidelity React dashboard.
 
-| Person | Role | Owns |
-|--------|------|------|
-| **Person 1** | Data & Intelligence | `@pancakeswap-agent/market-intelligence`, `@pancakeswap-agent/liquidity` |
-| **Person 2** | Strategy & Execution | `@pancakeswap-agent/strategy`, `@pancakeswap-agent/execution` |
-| **Person 3** | Risk & Portfolio | `@pancakeswap-agent/risk`, `@pancakeswap-agent/portfolio`, `dashboard` |
+---
 
-## Architecture Overview
+## 🖥️ Live Demo
 
-The system strictly avoids hard coupling. All agents communicate blindly over the **NEXUS Orchestrator Base** (a native TypeScript `EventEmitter` messaging bus) to enforce separation of concerns and robust async error isolation.
+| Platform | URL |
+|---|---|
+| **Vercel** | *(deploy from this repo to get your link)* |
+| **GitHub Pages** | `https://sarnav07.github.io/cake-sentinel/` *(after Pages setup)* |
+| **Local** | `http://localhost:5173` |
 
-```text
+---
+
+## 🏗️ Architecture
+
+All agents communicate over the **NEXUS Orchestrator Bus** — a typed Node.js `EventEmitter`. No agent imports another directly. Every message is a typed event.
+
+```
 Market Intelligence Agent (P1)
-    └─ publishes market_state → Orchestrator
-            ├─ Strategy Agent (P2) reads market_state, emits trade signals
-            ├─ Execution Agent (P2) executes approved trades on-chain
-            ├─ Portfolio Agent (P3) logs all trades, computes P&L
-            └─ Risk Agent (P3) approves / vetoes every trade
+    └─ market:update →
+            ├─ Strategy Agent (P2)   → strategy:signal →
+            │       └─ Risk Agent (P3)  → risk:decision →
+            │               └─ Execution Agent (P2) → execution:trade →
+            └─ Portfolio Agent (P3)  ← reads execution:trade
+                    └─ Dashboard WebSocket → React UI (live)
 ```
 
-## Working Mechanics (The 5-Step Loop)
+---
 
-1. The **Market Intelligence** module actively pulls subgraphs over viem to construct a pristine `MarketState` payload detailing all pool configurations, reserves, and real-time gas prices.
-2. The **Strategy Agent** natively listens to `market:update`. If an Arbitrage condition evaluates positive (Accounting for Slippage + Gas cost thresholds), it fires a `strategy:signal` into the Orchestrator.
-3. The **Risk Circuit-Breaker** catches the signal, verifying that total position size < $500, expected drawdowns are safe, and the macro-market conditions aren't inherently anomalous.
-4. Upon receiving `risk:decision { approved: true }`, the **Execution Agent** routes a live Swap signature to PancakeSwap V3 on testnet.
-5. Finally, the **Portfolio & Dashboard Layer** captures the EVM Receipt `execution:trade` payload to compute Sharpe Ratios and broadcast real-time metrics over WebSockets to the React User Interface.
+## 📦 Monorepo Structure
 
-## Deployment Address
-
-**Environment**: `BSC Testnet`
-*Smart Contracts are currently localized into `packages/contracts` via Foundry and will be natively mapped and deployed (TBD) prior to hackathon mainnet presentation.*
-
-## Repository Layout
-
-```text
+```
 packages/
-   core/                 # Typed definitions and Orchestrator Base
-   agents/
-      market-intelligence/ # P1 Graph Polling
-      liquidity/           # P1 Impermanent Loss estimations
-      strategy/            # P2 Arbitrage Conditionals
-      execution/           # P2 Viem Routing
-      risk/                # P3 Firewall Circuit Breakers
-      portfolio/           # P3 Trade Ledgers and API
-   dashboard/            # P3 Vite + React Front-end UI
-contracts/               # Forge Foundry Smart Contracts
-docs/                    # Project guidelines and audit matrices
+├── core/                    # Typed EventEmitter orchestrator + event types
+├── agents/
+│   ├── market-intelligence/ # (P1) Subgraph polling, regime detection, pool analysis
+│   ├── liquidity/           # (P1) V3 IL estimation, pool mapping
+│   ├── strategy/            # (P2) Arbitrage detection, signal generation
+│   ├── execution/           # (P2) viem routing, gas estimation, on-chain swap
+│   ├── risk/                # (P3) Circuit breakers, drawdown limits, firewall
+│   ├── portfolio/           # (P3) Trade ledger, P&L computation, API server
+│   └── simulation/          # Backtest engine (in progress)
+├── dashboard/               # React 18 + Vite + Tailwind — NEXUS UI
+│   └── src/
+│       ├── pages/           # LandingPage, Market, Strategy, Execution, Risk, Portfolio, Liquidity
+│       ├── components/
+│       │   ├── market/      # StatsBar, LiquidityStream, ExecutionTable, RiskGuardian, PoolIntelligence
+│       │   ├── shared/      # ActivityFeed, AgentStatusBar, SkeletonLoader
+│       │   └── ui/          # GlowCard, StatBadge, SectionTitle, LiveDot, MonoValue
+│       ├── context/         # NexusContext — global state + all live data hooks
+│       └── data/            # MockDataEngine (random-walk price sim), constants
+├── contracts/               # Foundry smart contracts (BSC Testnet)
+docs/
+└── final_audit_report.md    # Full system audit: what's built, what's wired, demo guide
 ```
 
-## Running the System
+---
+
+## 🤖 Team
+
+| Member | Role | Owns |
+|---|---|---|
+| **Person 1** | Data & Intelligence | `market-intelligence`, `liquidity` |
+| **Person 2** | Strategy & Execution | `strategy`, `execution` |
+| **Person 3** | Risk & Portfolio | `risk`, `portfolio`, `dashboard` |
+
+---
+
+## 🔁 The 5-Step Execution Loop
+
+1. **Market Intelligence** polls PancakeSwap V2/V3 subgraph + viem RPC every 5s → emits `market:update`
+2. **Strategy Agent** detects arbitrage opportunities (price discrepancy > gas cost + slippage) → emits `strategy:signal`
+3. **Risk Firewall** validates signal against `$500 position cap`, `4.8% max drawdown`, anomaly score → emits `risk:decision`
+4. **Execution Agent** routes approved swap via `viem.writeContract` to PancakeSwap V3 Router on BSC Testnet
+5. **Portfolio Agent** captures `execution:trade` receipt → computes P&L, Sharpe ratio → streams to dashboard
+
+---
+
+## 🚀 Running Locally
 
 ### Prerequisites
-- Node.js 18+
-- `.env` configured from `.env.example`
+- Node.js 20+
+- Copy `.env.example` → `.env` and fill in your BSC Testnet private key + RPC
 
-### Start Everything
+```bash
+# Install all dependencies
+npm install
+
+# Start all agents + dashboard
 bash ./start.sh
 
-### Dashboard
-Open http://localhost:5173 after running start.sh
+# Dashboard only
+cd packages/dashboard && npm run dev
+```
 
-### Testnet Config
-System runs on BSC Testnet (Chain ID 97) by default.
-To switch to mainnet: update `chain` import in execution agent and update router addresses.
+Dashboard opens at **http://localhost:5173**
+
+---
+
+## 🌐 Dashboard Features
+
+| Tab | Features |
+|---|---|
+| **Landing** | Canvas particle network, staggered NEXUS reveal, live stat counters |
+| **Market** | Live price stream, execution log, Risk Guardian sliders, Pool Intelligence |
+| **Strategy** | Signal feed (confidence-sorted), Regime Detector, Strategy Performance |
+| **Execution** | 20-row trade log, CSV export, Gas Tracker, MEV Shield status |
+| **Risk** | Circuit Breaker toggles, Drawdown history chart, Position Exposure |
+| **Portfolio** | Equity Curve (1D/7D/30D), PNL distribution histogram, Holdings breakdown |
+| **Liquidity** | V3 pool grid with TVL bars + ARB badges, IL Simulator, APR Leaderboard |
+
+All data powered by **MockDataEngine** — a Gaussian random-walk simulator that emits live price ticks, trade events, and agent activity every 2–8 seconds.
+
+---
+
+## 📡 Deployment
+
+### Vercel (Recommended)
+1. Import `Sarnav07/cake-sentinel` at [vercel.com/new](https://vercel.com/new)
+2. `vercel.json` is pre-configured — zero setup needed
+3. Click Deploy
+
+### GitHub Pages
+1. Repo Settings → Pages → Source: **GitHub Actions**
+2. Push to `main` — the workflow in `.github/workflows/deploy-dashboard.yml` auto-builds and deploys
+
+---
+
+## 🔑 Environment Variables
+
+```env
+# BSC Testnet
+PRIVATE_KEY=               # Wallet private key (never commit!)
+BSC_RPC_URL=https://data-seed-prebsc-1-s1.binance.org:8545
+PANCAKESWAP_V3_ROUTER=0x...
+PANCAKESWAP_V2_ROUTER=0x...
+GRAPH_API_KEY=             # The Graph API key for subgraph access
+PORT=3001                  # Portfolio Agent API port
+```
+
+---
+
+## 🛡️ Risk Parameters (Defaults)
+
+| Parameter | Value |
+|---|---|
+| Max Position Size | $500 |
+| Max Drawdown | 15% |
+| Stop Loss | -$25 per trade |
+| Anomaly Score Threshold | 75 / 100 |
+| Min Profit After Gas | $0.50 |
+
+---
+
+## 📄 Docs
+
+See [`docs/final_audit_report.md`](./docs/final_audit_report.md) for the full engineering audit: what's built, what's wired, known gaps, demo script, and judge Q&A guide.
+
+---
+
+*Built at IIT Roorkee — Technical General Championship 2026*
