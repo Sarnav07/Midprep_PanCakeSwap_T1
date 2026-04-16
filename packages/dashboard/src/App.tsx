@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { NexusProvider } from './context/NexusContext'
+import { useNexus, useBreachAlert } from './context/NexusContext'
 import Navbar           from './components/Navbar'
 import AgentStatusBar   from './components/shared/AgentStatusBar'
 import LandingPage      from './pages/LandingPage'
@@ -11,6 +12,60 @@ import ExecutionPage    from './pages/ExecutionPage'
 import RiskPage         from './pages/RiskPage'
 import PortfolioPage    from './pages/PortfolioPage'
 import LiquidityPage    from './pages/LiquidityPage'
+
+// ── Firewall Banner ────────────────────────────────────────────────────────────
+// Slides down from the top of every dashboard tab when isArmed = false
+function FirewallBanner() {
+  const { armed, clearBreach } = useNexus()
+  const { breachAlert }        = useBreachAlert()
+
+  return (
+    <AnimatePresence>
+      {!armed && (
+        <motion.div
+          key="firewall-banner"
+          initial={{ y: -80, opacity: 0 }}
+          animate={{ y: 0,   opacity: 1 }}
+          exit={{    y: -80, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+          className="flex items-center justify-between px-6 py-2.5 z-30 relative"
+          style={{
+            background: 'linear-gradient(90deg, rgba(180,10,30,0.95) 0%, rgba(220,30,50,0.95) 100%)',
+            borderBottom: '1px solid rgba(255,80,80,0.5)',
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <motion.span
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 0.8, repeat: Infinity }}
+              className="text-sm">⚠</motion.span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-white"
+              style={{ fontFamily: 'var(--font-mono)' }}>
+              Risk Firewall Triggered — Trading Paused
+            </span>
+            {breachAlert && (
+              <span className="text-[9px] px-2 py-0.5 rounded"
+                style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)',
+                  fontFamily: 'var(--font-mono)' }}>
+                {breachAlert.type}: {breachAlert.value}{breachAlert.type === 'DRAWDOWN' ? '%' : ''} {'>'} {breachAlert.limit * 0.9}{breachAlert.type === 'DRAWDOWN' ? '%' : ''} limit
+              </span>
+            )}
+          </div>
+          <motion.button
+            onClick={clearBreach}
+            whileHover={{ background: 'rgba(255,255,255,0.25)', scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            className="px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-[0.2em] text-white flex-shrink-0"
+            style={{ border: '1px solid rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)',
+              background: 'rgba(255,255,255,0.1)' }}>
+            ↺ Reset & Rearm
+          </motion.button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
 
 // ── Page transition wrapper ───────────────────────────────────────────────────
 function PageWrapper({ children }: { children: React.ReactNode }) {
@@ -46,12 +101,13 @@ function AppRoutes() {
           style={{ background: 'radial-gradient(circle, rgba(255,45,120,0.08) 0%, transparent 70%)', filter: 'blur(60px)', opacity: 0.4 }} />
       </div>
 
-      {/* Navbar + agent bar — only shown on dashboard routes */}
+      {/* Navbar + agent bar + firewall banner — only shown on dashboard routes */}
       {!isLanding && (
         <>
           <Navbar />
           <div className="pt-[60px]">
             <AgentStatusBar />
+            <FirewallBanner />
           </div>
         </>
       )}

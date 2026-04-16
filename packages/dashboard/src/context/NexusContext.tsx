@@ -3,7 +3,7 @@ import {
   engine, EngineState, AgentName,
   Signal, MarketRegime, RegimeHistoryEntry, StrategyPerf,
   RiskLimits, CircuitBreakers, DrawdownPoint, PositionExposure,
-  EquityPoint, TradeBucket, StrategyBreakdown,
+  EquityPoint, TradeBucket, StrategyBreakdown, BreachAlert,
 } from '../data/MockDataEngine'
 
 // ── Context shape ─────────────────────────────────────────────────────────────
@@ -12,6 +12,8 @@ interface NexusCtx {
   // Risk Guardian ARMED state
   armed: boolean
   toggleArmed: () => void
+  clearBreach: () => void
+  breachAlert: BreachAlert | null
   // Circuit breakers (global, delegated to engine)
   circuitBreakers: CircuitBreakers
   setCircuitBreakers: (b: Partial<CircuitBreakers>) => void
@@ -69,6 +71,19 @@ export function NexusProvider({ children }: { children: React.ReactNode }) {
 
   const toggleArmed = useCallback(() => setArmed(v => !v), [])
 
+  // Sync armed state into the engine so _generateTrade() respects it
+  useEffect(() => { engine.setArmedState(armed) }, [armed])
+
+  // Auto-disarm when engine raises a DRAWDOWN breachAlert
+  useEffect(() => {
+    if (state.breachAlert?.type === 'DRAWDOWN') setArmed(false)
+  }, [state.breachAlert])
+
+  const clearBreach = useCallback(() => {
+    engine.clearBreachAlert()
+    setArmed(true)
+  }, [])
+
   // Delegate setters to engine so they propagate to all subscribers
   const setRiskLimits    = useCallback((l: Partial<RiskLimits>)    => engine.setRiskLimits(l), [])
   const setCircuitBreakers = useCallback((b: Partial<CircuitBreakers>) => engine.setCircuitBreakers(b), [])
@@ -77,7 +92,8 @@ export function NexusProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <Ctx.Provider value={{
-      state, armed, toggleArmed,
+      state, armed, toggleArmed, clearBreach,
+      breachAlert: state.breachAlert,
       circuitBreakers: state.circuitBreakers,
       setCircuitBreakers,
       riskLimits: state.riskLimits,
@@ -215,4 +231,9 @@ export function useIsInitializing() {
 }
 
 // Re-export types for page files
-export type { EquityPoint, TradeBucket, StrategyBreakdown }
+export type { EquityPoint, TradeBucket, StrategyBreakdown, BreachAlert }
+
+export function useBreachAlert() {
+  const { breachAlert, clearBreach } = useNexus()
+  return { breachAlert, clearBreach }
+}

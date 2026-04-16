@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAgentStatuses, useNexus } from '../../context/NexusContext'
+import { useAgentStatuses, useNexus, useRiskMetrics } from '../../context/NexusContext'
 import type { AgentName, AgentStatus } from '../../data/MockDataEngine'
 
 // ── Agent Detail Sidebar ───────────────────────────────────────────────────────
@@ -110,8 +110,13 @@ function AgentSidebar() {
 
 // ── Main Status Bar ────────────────────────────────────────────────────────────
 export default function AgentStatusBar() {
-  const agents = useAgentStatuses()
-  const { setSidebarAgent } = useNexus()
+  const agents              = useAgentStatuses()
+  const { setSidebarAgent, armed, riskLimits } = useNexus()
+  const risk                = useRiskMetrics()
+
+  // Drawdown ratio vs limit (for RISK indicator colour)
+  const ddRatio  = riskLimits.drawdownLimit > 0 ? risk.drawdown / riskLimits.drawdownLimit : 0
+  const riskColor = ddRatio > 0.7 ? 'var(--red)' : ddRatio > 0.3 ? 'var(--amber)' : 'var(--green)'
 
   return (
     <>
@@ -124,40 +129,75 @@ export default function AgentStatusBar() {
           Agents
         </span>
 
-        {agents.map((agent: AgentStatus) => (
-          <motion.button
-            key={agent.name}
-            onClick={() => setSidebarAgent(agent.name as AgentName)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full flex-shrink-0 transition-all cursor-pointer"
-            style={{
-              background: agent.active ? `${agent.color}15` : 'transparent',
-              border: agent.active ? `1px solid ${agent.color}40` : '1px solid transparent',
-            }}
-            whileHover={{ background: `${agent.color}10`, borderColor: `${agent.color}30` }}
-            whileTap={{ scale: 0.96 }}
-          >
-            {/* Status dot */}
-            {agent.active ? (
-              <motion.div
-                animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
-                transition={{ duration: 0.8, repeat: Infinity }}
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: agent.color, boxShadow: `0 0 8px ${agent.color}` }}
-              />
-            ) : (
-              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: 'rgba(255,255,255,0.15)' }} />
-            )}
+        {/* ── SYSTEM PAUSED badge replaces dots when disarmed ── */}
+        <AnimatePresence mode="wait">
+          {!armed ? (
+            <motion.div key="paused"
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-2 flex-1">
+              <motion.span
+                animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 0.7, repeat: Infinity }}
+                className="px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-[0.2em]"
+                style={{
+                  background: 'rgba(255,68,68,0.12)',
+                  border: '1px solid rgba(255,68,68,0.45)',
+                  color: 'var(--red)',
+                  fontFamily: 'var(--font-mono)',
+                  boxShadow: '0 0 12px rgba(255,68,68,0.3)',
+                }}>
+                ⬛ SYSTEM PAUSED — ALL AGENTS HALTED
+              </motion.span>
+            </motion.div>
+          ) : (
+            <motion.div key="agents"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-1 flex-1">
+              {agents.map((agent: AgentStatus) => (
+                <motion.button
+                  key={agent.name}
+                  onClick={() => setSidebarAgent(agent.name as AgentName)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full flex-shrink-0 transition-all cursor-pointer"
+                  style={{
+                    background: agent.active ? `${agent.color}15` : 'transparent',
+                    border: agent.active ? `1px solid ${agent.color}40` : '1px solid transparent',
+                  }}
+                  whileHover={{ background: `${agent.color}10`, borderColor: `${agent.color}30` }}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  {agent.active ? (
+                    <motion.div
+                      animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ background: agent.color, boxShadow: `0 0 8px ${agent.color}` }}
+                    />
+                  ) : (
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ background: 'rgba(255,255,255,0.15)' }} />
+                  )}
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap"
+                    style={{ color: agent.active ? agent.color : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    {agent.name}
+                  </span>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap"
-              style={{ color: agent.active ? agent.color : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              {agent.name}
+        {/* ── RISK indicator (right side) ── */}
+        <div className="ml-auto flex items-center gap-3 flex-shrink-0 pl-4">
+          <div className="flex items-center gap-1.5">
+            <motion.div
+              animate={ddRatio > 0.7 ? { opacity: [1, 0.3, 1] } : {}}
+              transition={{ duration: 0.6, repeat: Infinity }}
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: riskColor, boxShadow: `0 0 6px ${riskColor}` }} />
+            <span className="text-[9px] font-bold uppercase tracking-[0.1em]"
+              style={{ color: riskColor, fontFamily: 'var(--font-mono)' }}>
+              DD {risk.drawdown.toFixed(1)}%
             </span>
-          </motion.button>
-        ))}
-
-        {/* System time */}
-        <div className="ml-auto flex-shrink-0 pl-4">
+          </div>
           <span className="text-[9px]" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             BSC TESTNET
           </span>

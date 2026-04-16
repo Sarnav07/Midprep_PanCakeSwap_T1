@@ -85,6 +85,13 @@ export interface CircuitBreakers {
   depegAlert:  boolean
 }
 
+export interface BreachAlert {
+  type:      'DRAWDOWN' | 'ANOMALY'
+  value:     number
+  limit:     number
+  timestamp: string
+}
+
 export interface PositionExposure {
   token:        string
   exposure:     string
@@ -118,6 +125,7 @@ export interface EngineState {
   drawdownHistory: DrawdownPoint[]
   riskLimits: RiskLimits
   circuitBreakers: CircuitBreakers
+  breachAlert: BreachAlert | null
   positionExposure: PositionExposure[]
   // Portfolio tab state
   equityCurve: EquityPoint[]
@@ -188,16 +196,15 @@ const nowStr = () => new Date().toLocaleTimeString('en-US', { hour12: false })
 
 // ── Engine ────────────────────────────────────────────────────────────────────
 export class MockDataEngine {
-  private listeners: Set<Listener> = new Set()
+  private listeners = new Set<Listener>()
   private timers: ReturnType<typeof setInterval>[] = []
-  state: EngineState
-
-  // track regime index for rotation
+  private _armed = true  // mirrors NexusContext armed state
   private _regimeIdx = 0
   // track cumulative drawdown for history
   private _cumulativeDD = 0
   // track previous pool APRs for flash detection
   private _prevPoolAprs: Record<string, number> = {}
+  state: EngineState
 
   constructor() {
     const now = new Date().toLocaleTimeString('en-US', { hour12: false })
@@ -245,6 +252,7 @@ export class MockDataEngine {
       drawdownHistory: ddHistory,
       riskLimits: { drawdownLimit: 15, positionSize: 320, anomalyScore: 70 },
       circuitBreakers: { maxDrawdown: true, flashCrash: true, oracleGuard: true, depegAlert: true },
+      breachAlert: null,
       positionExposure: [
         { token: 'WBNB', exposure: '$845.20', portfolioPct: '58.3%', riskLevel: 'LOW'    },
         { token: 'USDT', exposure: '$412.00', portfolioPct: '28.4%', riskLevel: 'LOW'    },
@@ -264,6 +272,19 @@ export class MockDataEngine {
     fn(this.state) // immediate first emit
     return () => this.listeners.delete(fn)
   }
+
+  /** Called by NexusContext whenever armed state changes */
+  setArmedState(armed: boolean) {
+    this._armed = armed
+  }
+
+  /** Called by NexusContext RESET & REARM action */
+  clearBreachAlert() {
+    this._armed = true
+    this.state = { ...this.state, breachAlert: null }
+    this._emit()
+  }
+
 
   start() {
     // Price tick: every 2s
@@ -345,6 +366,9 @@ export class MockDataEngine {
   }
 
   private _generateTrade() {
+    // Pause trade generation when system is disarmed
+    if (!this._armed) return
+
     const pairs  = PAIRS
     const sides  = ['BUY', 'SELL'] as const
     const pair   = pairs[Math.floor(Math.random() * pairs.length)]
@@ -429,16 +453,50 @@ export class MockDataEngine {
       sharpe:       Math.max(0, r.sharpe + randomNormal(0, 0.02)),
       positionSize: Math.max(0, Math.min(500, r.positionSize + randomNormal(0, 5))),
     }
-    // Auto-disarm: if anomaly breaches riskLimits.anomalyScore threshold, trip maxDrawdown breaker
     const breakers = { ...this.state.circuitBreakers }
-    if (newAnomaly > this.state.riskLimits.anomalyScore && breakers.maxDrawdown) {
-      breakers.maxDrawdown = false
-      // schedule auto-reset after 5s
-      setTimeout(() => {
-        this.state = { ...this.state, circuitBreakers: { ...this.state.circuitBreakers, maxDrawdown: true } }
+
+    // ── BREACH DETECTION ──────────────────────────────────────────────────────
+    // Don't stack breaches — only trip if no active alert
+    if (!this.state.breachAlert) {
+      const ddLimit = this.state.riskLimits.drawdownLimit
+      const anLimit = this.state.riskLimits.anomalyScore
+
+      if (newRisk.drawdown >= ddLimit * 0.9) {
+        // Drawdown breach → auto-disarm + circuit breaker
+        this._armed = false
+        breakers.maxDrawdown = false
+        const alert: BreachAlert = {
+          type: 'DRAWDOWN', value: parseFloat(newRisk.drawdown.toFixed(2)),
+          limit: ddLimit, timestamp: nowStr(),
+        }
+        this.state = { ...this.state, risk: newRisk, circuitBreakers: breakers, breachAlert: alert }
+        this._activateAgent('Risk')
         this._emit()
-      }, 5000)
+        // Auto-clear alert after 8 seconds
+        setTimeout(() => {
+          this.state = { ...this.state, breachAlert: null }
+          this._emit()
+        }, 8000)
+        return
+      }
+
+      if (newAnomaly >= anLimit) {
+        // Anomaly breach → warning alert (no auto-disarm, just flash)
+        const alert: BreachAlert = {
+          type: 'ANOMALY', value: parseFloat(newAnomaly.toFixed(0)),
+          limit: anLimit, timestamp: nowStr(),
+        }
+        this.state = { ...this.state, risk: newRisk, circuitBreakers: breakers, breachAlert: alert }
+        this._activateAgent('Risk')
+        this._emit()
+        setTimeout(() => {
+          this.state = { ...this.state, breachAlert: null }
+          this._emit()
+        }, 8000)
+        return
+      }
     }
+
     this.state = { ...this.state, risk: newRisk, circuitBreakers: breakers }
     this._activateAgent('Risk')
     this._emit()
