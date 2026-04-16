@@ -38,11 +38,24 @@ body {
 }
 
 /* ── Custom Scrollbar ──────────────────────────────────────────────────────── */
-::-webkit-scrollbar          { width: 4px; height: 4px; background: var(--bg-primary); }
+::-webkit-scrollbar          { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track    { background: transparent; }
-::-webkit-scrollbar-thumb    { background: var(--border-accent); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
-* { scrollbar-width: thin; scrollbar-color: var(--border-accent) transparent; }
+::-webkit-scrollbar-thumb    { background: rgba(0,229,255,0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.4); }
+* { scrollbar-width: thin; scrollbar-color: rgba(0,229,255,0.2) transparent; }
+
+/* ── Focus ring (accessibility) ────────────────────────────────────────────── */
+*:focus-visible {
+  outline: 1.5px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Interactive cursors ────────────────────────────────────────────────────── */
+button, a, [role="button"], input[type="range"], select { cursor: pointer; }
+
+/* ── Touch active state (mirrors hover on tap devices) ─────────────────────── */
+button:active, [role="button"]:active { transform: scale(0.97); }
 
 /* ── Typography Helpers ────────────────────────────────────────────────────── */
 .font-mono     { font-family: var(--font-mono) !important; }
@@ -58,9 +71,6 @@ body {
   border-color: var(--border-accent) !important;
   box-shadow: 0 8px 30px rgba(0,229,255,0.06);
 }
-
-/* ── Button Tap Effect ─────────────────────────────────────────────────────── */
-button:active { transform: scale(0.98); }
 
 /* ── Scanline overlay ──────────────────────────────────────────────────────── */
 .scanlines::after {
@@ -92,13 +102,8 @@ button:active { transform: scale(0.98); }
 }
 .nexus-glow { animation: nexus-glow 3s ease-in-out infinite; }
 
-/* ── Responsive mobile: stack all 2-col grids ──────────────────────────────── */
+/* ── Mobile: tighter content padding ───────────────────────────────────────── */
 @media (max-width: 768px) {
-  .xl-grid-30 { grid-template-columns: 1fr !important; }
-
-  /* Hide right sidebar panels on mobile */
-  .sidebar-hide-mobile { display: none !important; }
-
-  /* Tighter padding on mobile */
-  .max-w-\[1400px\] { padding-left: 1rem; padding-right: 1rem; }
+  .max-w-\[1400px\] { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
 }
+

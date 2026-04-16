@@ -133,10 +133,11 @@ export default function PortfolioPage() {
               Updated {secsAgo}s ago
             </p>
           </div>
-          <div className="flex gap-1.5">
+          {/* Range selector — inline on md+, full-width wrap on mobile */}
+          <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
             {(['1D', '7D', '30D'] as Range[]).map(r => (
               <button key={r} onClick={() => setRange(r)}
-                className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all"
+                className="flex-1 sm:flex-none px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   background: range === r ? 'rgba(0,229,255,0.12)' : 'transparent',
@@ -182,8 +183,8 @@ export default function PortfolioPage() {
         </ResponsiveContainer>}
       </GlowCard>
 
-      {/* ── Performance Metrics — live count-up ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── Performance Metrics — 2×2 grid on mobile, 4-col on md+ ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Return */}
         <GlowCard delay={0.1} className="p-5">
           <p className="text-[10px] uppercase tracking-[0.25em] mb-3"
@@ -241,7 +242,10 @@ export default function PortfolioPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-dim)' }}>
                   {['Strategy','Trades','Win %','Gross PNL','Gas Cost','Net PNL','Sharpe'].map(c => (
-                    <th key={c} className="pb-3 text-left text-[9px] font-bold uppercase tracking-[0.2em] pr-4"
+                    <th key={c}
+                      className={`pb-3 text-left text-[9px] font-bold uppercase tracking-[0.2em] pr-4${
+                        c === 'Gas Cost' || c === 'Sharpe' ? ' hidden md:table-cell' : ''
+                      }`}
                       style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{c}</th>
                   ))}
                 </tr>
@@ -263,12 +267,12 @@ export default function PortfolioPage() {
                         style={{ color: isTop ? 'var(--cyan)' : 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{row.name}</td>
                       <td className="py-3.5 pr-4 text-[11px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{row.trades}</td>
                       <td className="py-3.5 pr-4 text-[11px]" style={{ color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>{row.winPct}</td>
-                      <td className="py-3.5 pr-4 text-[11px]" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>${row.grossPnL.toFixed(2)}</td>
-                      <td className="py-3.5 pr-4 text-[11px]" style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)' }}>${row.gasCost.toFixed(2)}</td>
+                      <td className="py-3.5 pr-4 text-[11px] hidden md:table-cell" style={{ color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>${row.grossPnL.toFixed(2)}</td>
+                      <td className="py-3.5 pr-4 text-[11px] hidden md:table-cell" style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)' }}>${row.gasCost.toFixed(2)}</td>
                       <td className="py-3.5 pr-4 text-[11px] font-bold" style={{ color: row.netPnL >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--font-mono)' }}>
                         {row.netPnL >= 0 ? '+' : ''}${row.netPnL.toFixed(2)}
                       </td>
-                      <td className="py-3.5 pr-4">
+                      <td className="py-3.5 pr-4 hidden md:table-cell">
                         <span className="text-[11px] font-bold"
                           style={{ color: row.sharpe >= 2 ? 'var(--cyan)' : row.sharpe >= 1.5 ? 'var(--amber)' : 'var(--red)', fontFamily: 'var(--font-mono)' }}>
                           {row.sharpe.toFixed(2)}

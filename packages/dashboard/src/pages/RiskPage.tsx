@@ -56,27 +56,28 @@ function CircuitBreakerPanel() {
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.1 }}
-      className="rounded-xl p-5 space-y-5"
+      className="rounded-xl p-5"
       style={{ background: 'var(--bg-card)', border: '1px solid var(--border-dim)' }}>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-5">
         <span className="w-1.5 h-1.5 rounded-full"
           style={{ background: 'var(--red)', boxShadow: '0 0 6px var(--red)' }} />
         <span className="text-xs font-bold uppercase tracking-[0.25em]"
           style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>Circuit Breakers</span>
       </div>
 
-      <div className="space-y-4">
+      {/* 2×2 grid on mobile, list on md+ */}
+      <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
         {LABELS.map(({ key, label }) => {
           const on      = circuitBreakers[key]
-          const tripped = !on && key === 'flashCrash' // pulsing ring only on auto-tripped flashCrash
+          const tripped = !on && key === 'flashCrash'
           return (
-            <div key={key} className="flex items-center justify-between py-2"
-              style={{ borderBottom: '1px solid var(--border-dim)' }}>
-              <div>
-                <p className="text-[11px] font-semibold"
+            <div key={key} className="flex items-center justify-between py-3 px-3 rounded-lg md:rounded-none md:px-0"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-dim)' }}>
+              <div className="pr-2">
+                <p className="text-[10px] font-semibold leading-tight"
                   style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{label}</p>
-                <p className="text-[9px] mt-0.5 uppercase tracking-[0.15em]"
+                <p className="text-[8px] mt-0.5 uppercase tracking-[0.15em]"
                   style={{ color: on ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--font-mono)' }}>
                   {on ? '● ARMED' : '○ TRIPPED'}
                 </p>
@@ -271,20 +272,17 @@ function RiskMetricsCards() {
 export default function RiskPage() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5 items-start">
-
       {/* Left column */}
       <div className="space-y-5">
         <RiskGuardian />
         <DrawdownChart />
         <ExposureTable />
       </div>
-
-      {/* Right column */}
+      {/* Right column — stacks below on mobile */}
       <div className="space-y-5">
         <CircuitBreakerPanel />
         <RiskMetricsCards />
       </div>
-
     </div>
   )
 }

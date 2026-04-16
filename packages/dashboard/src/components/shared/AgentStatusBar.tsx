@@ -1,6 +1,8 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useLocation } from 'react-router-dom'
 import { useAgentStatuses, useNexus, useRiskMetrics } from '../../context/NexusContext'
+import { TAB_AGENTS } from '../../data/constants'
 import type { AgentName, AgentStatus } from '../../data/MockDataEngine'
 
 // ── Agent Detail Sidebar ───────────────────────────────────────────────────────
@@ -113,6 +115,11 @@ export default function AgentStatusBar() {
   const agents              = useAgentStatuses()
   const { setSidebarAgent, armed, riskLimits } = useNexus()
   const risk                = useRiskMetrics()
+  const location            = useLocation()
+
+  // Active tab's owning agent (for dot highlight)
+  const tabKey      = location.pathname.replace('/', '') || 'market'
+  const activeAgent = TAB_AGENTS[tabKey]?.agentKey ?? null
 
   // Drawdown ratio vs limit (for RISK indicator colour)
   const ddRatio  = riskLimits.drawdownLimit > 0 ? risk.drawdown / riskLimits.drawdownLimit : 0
@@ -152,53 +159,70 @@ export default function AgentStatusBar() {
             <motion.div key="agents"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="flex items-center gap-1 flex-1">
-              {agents.map((agent: AgentStatus) => (
-                <motion.button
-                  key={agent.name}
-                  onClick={() => setSidebarAgent(agent.name as AgentName)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full flex-shrink-0 transition-all cursor-pointer"
-                  style={{
-                    background: agent.active ? `${agent.color}15` : 'transparent',
-                    border: agent.active ? `1px solid ${agent.color}40` : '1px solid transparent',
-                  }}
-                  whileHover={{ background: `${agent.color}10`, borderColor: `${agent.color}30` }}
-                  whileTap={{ scale: 0.96 }}
-                >
-                  {agent.active ? (
-                    <motion.div
-                      animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
-                      transition={{ duration: 0.8, repeat: Infinity }}
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: agent.color, boxShadow: `0 0 8px ${agent.color}` }}
-                    />
-                  ) : (
-                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: 'rgba(255,255,255,0.15)' }} />
-                  )}
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap"
-                    style={{ color: agent.active ? agent.color : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                    {agent.name}
-                  </span>
-                </motion.button>
-              ))}
+              {agents.map((agent: AgentStatus) => {
+                  const isOwner = agent.name === activeAgent
+                  return (
+                  <motion.button
+                    key={agent.name}
+                    onClick={() => setSidebarAgent(agent.name as AgentName)}
+                    className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-full flex-shrink-0 transition-all cursor-pointer"
+                    style={{
+                      background: (agent.active || isOwner) ? `${agent.color}15` : 'transparent',
+                      border: (agent.active || isOwner) ? `1px solid ${agent.color}${isOwner ? '60' : '40'}` : '1px solid transparent',
+                      transform: isOwner ? 'scale(1.08)' : 'scale(1)',
+                    }}
+                    whileHover={{ background: `${agent.color}10`, borderColor: `${agent.color}30` }}
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    {agent.active ? (
+                      <motion.div
+                        animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
+                        transition={{ duration: 0.8, repeat: Infinity }}
+                        className="flex-shrink-0 rounded-full"
+                        style={{
+                          width: isOwner ? 8 : 6, height: isOwner ? 8 : 6,
+                          background: agent.color, boxShadow: `0 0 ${isOwner ? 12 : 8}px ${agent.color}`,
+                        }}
+                      />
+                    ) : (
+                      <div className="flex-shrink-0 rounded-full"
+                        style={{
+                          width: isOwner ? 8 : 6, height: isOwner ? 8 : 6,
+                          background: isOwner ? agent.color : 'rgba(255,255,255,0.15)',
+                          boxShadow: isOwner ? `0 0 8px ${agent.color}60` : 'none',
+                        }} />
+                    )}
+                    {/* Hide name labels on mobile, show on md+ */}
+                    <span className="hidden md:block text-[9px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap"
+                      style={{ color: (agent.active || isOwner) ? agent.color : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      {agent.name}
+                    </span>
+                  </motion.button>
+                  )
+                })}
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* ── RISK indicator (right side) ── */}
-        <div className="ml-auto flex items-center gap-3 flex-shrink-0 pl-4">
+        <div className="ml-auto flex items-center gap-3 flex-shrink-0 pl-3">
           <div className="flex items-center gap-1.5">
             <motion.div
               animate={ddRatio > 0.7 ? { opacity: [1, 0.3, 1] } : {}}
               transition={{ duration: 0.6, repeat: Infinity }}
               className="w-1.5 h-1.5 rounded-full"
               style={{ background: riskColor, boxShadow: `0 0 6px ${riskColor}` }} />
-            <span className="text-[9px] font-bold uppercase tracking-[0.1em]"
+            {/* Full text on md+, just % on mobile */}
+            <span className="hidden md:block text-[9px] font-bold uppercase tracking-[0.1em]"
               style={{ color: riskColor, fontFamily: 'var(--font-mono)' }}>
               DD {risk.drawdown.toFixed(1)}%
             </span>
+            <span className="md:hidden text-[9px] font-bold"
+              style={{ color: riskColor, fontFamily: 'var(--font-mono)' }}>
+              {risk.drawdown.toFixed(1)}%
+            </span>
           </div>
-          <span className="text-[9px]" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          <span className="hidden md:block text-[9px]" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             BSC TESTNET
           </span>
         </div>

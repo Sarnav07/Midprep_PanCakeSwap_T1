@@ -39,3 +39,23 @@ export const DEFAULT_POOL_DATA = [
   { name: 'XRP/USDT',  version: 'V2', tier: 'MID-CAP'   as RiskTier, fee: '0.25%', tvl: 128e6,   vol24h: 22e3,    aprRaw: 31.4,  apr: '31.4%',  arb: false },
   { name: 'SHIB/BUSD', version: 'V2', tier: 'DEGEN'     as RiskTier, fee: '1.00%', tvl: 18e6,    vol24h: 4200,    aprRaw: 124.7, apr: '124.7%', arb: false },
 ]
+
+// ── Tab navigation ────────────────────────────────────────────────────────────
+export const TABS = [
+  { label: 'Market',    path: '/market'    },
+  { label: 'Strategy',  path: '/strategy'  },
+  { label: 'Execution', path: '/execution' },
+  { label: 'Risk',      path: '/risk'      },
+  { label: 'Portfolio', path: '/portfolio' },
+  { label: 'Liquidity', path: '/liquidity' },
+]
+
+// ── Tab → Agent ownership breadcrumb ─────────────────────────────────────────
+export const TAB_AGENTS: Record<string, { name: string; color: string; icon: string; agentKey: string }> = {
+  market:    { name: 'Market Intelligence', color: '#00e5ff', icon: '◈', agentKey: 'Market Intel' },
+  strategy:  { name: 'Strategy Agent',      color: '#a855f7', icon: '◆', agentKey: 'Strategy'     },
+  execution: { name: 'Execution Agent',     color: '#f59e0b', icon: '▶', agentKey: 'Execution'    },
+  risk:      { name: 'Risk Management',     color: '#ff4444', icon: '⬡', agentKey: 'Risk'         },
+  portfolio: { name: 'Portfolio Agent',     color: '#00ff88', icon: '◉', agentKey: 'Portfolio'    },
+  liquidity: { name: 'Liquidity Agent',     color: '#3b82f6', icon: '◎', agentKey: 'Liquidity'   },
+}

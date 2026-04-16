@@ -364,17 +364,29 @@ function StrategyPerformanceTable() {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function StrategyPage() {
+  const [showPerf, setShowPerf] = useState(false)
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-5 items-start">
-        {/* Left: live Signal Feed */}
         <SignalFeed />
-        {/* Right: live Regime Detector */}
         <RegimeDetector />
       </div>
 
-      {/* Bottom: live Strategy Performance */}
-      <StrategyPerformanceTable />
+      {/* Performance — always shown on md+; collapsible toggle on mobile */}
+      <div>
+        <button
+          className="md:hidden w-full flex items-center justify-between px-5 py-3 rounded-xl mb-2"
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border-dim)',
+            color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11 }}
+          onClick={() => setShowPerf(v => !v)}
+        >
+          <span className="uppercase tracking-[0.2em] font-bold">Show Performance</span>
+          <motion.span animate={{ rotate: showPerf ? 180 : 0 }} transition={{ duration: 0.2 }}>▼</motion.span>
+        </button>
+        <div className="hidden md:block"><StrategyPerformanceTable /></div>
+        {showPerf && <div className="md:hidden"><StrategyPerformanceTable /></div>}
+      </div>
     </div>
   )
 }
