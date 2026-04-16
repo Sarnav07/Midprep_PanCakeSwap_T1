@@ -40,6 +40,8 @@ interface NexusCtx {
   strategyBreakdown: StrategyBreakdown[]
   // Liquidity tab actions
   sendToStrategy: (poolName: string) => void
+  // Boot state
+  isInitializing: boolean
 }
 
 const Ctx = createContext<NexusCtx | null>(null)
@@ -52,6 +54,12 @@ export function NexusProvider({ children }: { children: React.ReactNode }) {
   const [activePairFilter, setActivePairFilter]   = useState('All Pairs')
   const [activeSideFilter, setActiveSideFilter]   = useState('All Sides')
   const [sidebarAgent, setSidebarAgent]           = useState<AgentName | null>(null)
+  const [isInitializing, setIsInitializing]       = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setIsInitializing(false), 1800)
+    return () => clearTimeout(t)
+  }, [])
 
   useEffect(() => {
     const unsub = engine.subscribe(setState)
@@ -90,6 +98,8 @@ export function NexusProvider({ children }: { children: React.ReactNode }) {
       strategyBreakdown:   state.strategyBreakdown,
       // Liquidity tab actions
       sendToStrategy,
+      // Boot
+      isInitializing,
     }}>
       {children}
     </Ctx.Provider>
@@ -198,6 +208,10 @@ export function useStrategyBreakdown() {
 export function useGasEfficiency() {
   const { state } = useNexus()
   return state.gasEfficiency
+}
+
+export function useIsInitializing() {
+  return useNexus().isInitializing
 }
 
 // Re-export types for page files

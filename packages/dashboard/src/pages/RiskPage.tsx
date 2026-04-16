@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
 } from 'recharts'
 import RiskGuardian from '../components/market/RiskGuardian'
+import SkeletonLoader from '../components/ui/SkeletonLoader'
 import {
   useNexus,
   useDrawdownHistory,
@@ -92,11 +93,19 @@ function CircuitBreakerPanel() {
 // ── Drawdown Chart ────────────────────────────────────────────────────────────
 function DrawdownChart() {
   const history    = useDrawdownHistory()
-  const { riskLimits } = useNexus()
+  const { riskLimits, isInitializing } = useNexus()
   const risk       = useRiskMetrics()
   const limit      = -riskLimits.drawdownLimit
   const current    = history[history.length - 1]?.value ?? 0
   const breached   = current < limit
+
+  if (isInitializing || history.length === 0) {
+    return (
+      <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-dim)' }}>
+        <SkeletonLoader type="chart" />
+      </div>
+    )
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -159,11 +168,20 @@ function DrawdownChart() {
 // ── Position Exposure ─────────────────────────────────────────────────────────
 function ExposureTable() {
   const exposure = usePositionExposure()
+  const { isInitializing } = useNexus()
   const RISK_COLOR = { LOW: 'var(--green)', MEDIUM: 'var(--amber)', HIGH: 'var(--red)' }
   const RISK_BG    = {
     LOW:    { bg: 'rgba(0,255,136,0.08)',  border: 'rgba(0,255,136,0.2)'  },
     MEDIUM: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
     HIGH:   { bg: 'rgba(255,68,68,0.08)',  border: 'rgba(255,68,68,0.2)'  },
+  }
+
+  if (isInitializing || exposure.length === 0) {
+    return (
+      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-dim)', padding: 20 }}>
+        <SkeletonLoader type="row" count={4} />
+      </div>
+    )
   }
 
   return (

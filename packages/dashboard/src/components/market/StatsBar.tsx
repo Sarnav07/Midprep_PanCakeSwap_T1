@@ -2,6 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { useLivePnL, useNexus } from '../../context/NexusContext'
+import SkeletonLoader from '../ui/SkeletonLoader'
 
 const spark = (seed: number, len = 12) =>
   Array.from({ length: len }, (_, i) => ({ v: 50 + Math.sin((i + seed) / 2) * 30 + Math.random() * 10 }))
@@ -10,6 +11,9 @@ const spark = (seed: number, len = 12) =>
 
 export default function StatsBar() {
   const pnl = useLivePnL()
+  const { isInitializing } = useNexus()
+
+  if (isInitializing) return <SkeletonLoader type="stat" count={4} />
 
   const STATS = [
     {

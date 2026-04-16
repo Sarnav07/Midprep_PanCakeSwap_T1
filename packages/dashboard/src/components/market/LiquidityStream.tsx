@@ -4,7 +4,8 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   CartesianGrid, ResponsiveContainer,
 } from 'recharts'
-import { useLiquidityStream } from '../../context/NexusContext'
+import { useLiquidityStream, useNexus } from '../../context/NexusContext'
+import SkeletonLoader from '../ui/SkeletonLoader'
 
 
 
@@ -30,6 +31,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function LiquidityStream() {
   const rawStream = useLiquidityStream()
+  const { isInitializing } = useNexus()
+  if (isInitializing || rawStream.length === 0) return <SkeletonLoader type="chart" />
   const DATA = rawStream.map((p, i) => {
     const mins = (Date.now() / 60000 - (rawStream.length - 1 - i) * 0.5) % (24 * 60)
     const h = Math.floor(mins / 60) % 24

@@ -8,9 +8,10 @@ import {
 import GlowCard from '../components/ui/GlowCard'
 import SectionTitle from '../components/ui/SectionTitle'
 import MonoValue from '../components/ui/MonoValue'
+import SkeletonLoader from '../components/ui/SkeletonLoader'
 import {
   useLivePnL, useGasEfficiency, useEquityCurve,
-  useStrategyBreakdown, useTradeDist,
+  useStrategyBreakdown, useTradeDist, useNexus,
 } from '../context/NexusContext'
 
 // ── useCountUp ────────────────────────────────────────────────────────────────
@@ -99,6 +100,7 @@ export default function PortfolioPage() {
   const strategyBreakdown  = useStrategyBreakdown()
   const tradeDistribution  = useTradeDist()
   const secsAgo            = useSecondsAgo()
+  const { isInitializing } = useNexus()
 
   // Filtered equity window based on range
   const chartData = useMemo(() => {
@@ -147,7 +149,10 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={300}>
+        {/* Chart area */}
+        {isInitializing || chartData.length === 0
+          ? <SkeletonLoader type="chart" className="mt-4" />
+          : <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="cyanGrad" x1="0" y1="0" x2="0" y2="1">
@@ -174,7 +179,7 @@ export default function PortfolioPage() {
               stroke="#00e5ff" strokeWidth={2.5} fill="url(#cyanGrad)"
               isAnimationActive={false} />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </GlowCard>
 
       {/* ── Performance Metrics — live count-up ── */}

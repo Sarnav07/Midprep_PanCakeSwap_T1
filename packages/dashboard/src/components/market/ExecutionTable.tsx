@@ -1,9 +1,18 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { useExecutionFeed } from '../../context/NexusContext'
+import { useExecutionFeed, useNexus } from '../../context/NexusContext'
+import SkeletonLoader from '../ui/SkeletonLoader'
 
 export default function ExecutionTable() {
   const TRADES = useExecutionFeed().slice(0, 10)
+  const { isInitializing } = useNexus()
+  if (isInitializing || TRADES.length === 0) {
+    return (
+      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-dim)', padding: 20 }}>
+        <SkeletonLoader type="row" count={6} />
+      </div>
+    )
+  }
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

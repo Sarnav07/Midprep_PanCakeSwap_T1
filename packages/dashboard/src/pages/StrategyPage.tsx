@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { useNexus, useSignals, useMarketRegime, useStrategyPerformance } from '../context/NexusContext'
 import { SkeletonRow } from '../components/shared/SkeletonLoader'
+import SkeletonLoader from '../components/ui/SkeletonLoader'
 import type { Signal, RegimeLabel } from '../data/MockDataEngine'
 
 // ── Style maps ────────────────────────────────────────────────────────────────
@@ -116,6 +117,7 @@ function SignalCard({ s, i, flash }: { s: Signal; i: number; flash: boolean }) {
 // ── Signal Feed ───────────────────────────────────────────────────────────────
 function SignalFeed() {
   const signals = useSignals()
+  const { isInitializing } = useNexus()
   const prevLen  = useRef(signals.length)
   const [flash, setFlash] = useState(false)
 
@@ -126,11 +128,12 @@ function SignalFeed() {
       prevLen.current = signals.length
       return () => clearTimeout(t)
     }
-    // Also flash on each tick (signals are refreshed every 8s, same count)
     setFlash(true)
     const t = setTimeout(() => setFlash(false), 600)
     return () => clearTimeout(t)
   }, [signals])
+
+  if (isInitializing) return <SkeletonLoader type="card" count={4} />
 
   return (
     <div className="space-y-4">
@@ -269,6 +272,16 @@ function RegimeDetector() {
 // ── Strategy Performance Table ────────────────────────────────────────────────
 function StrategyPerformanceTable() {
   const perf = useStrategyPerformance()
+  const { isInitializing } = useNexus()
+
+  if (isInitializing) {
+    return (
+      <div className="rounded-xl overflow-hidden"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-dim)', padding: 20 }}>
+        <SkeletonLoader type="row" count={3} />
+      </div>
+    )
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}

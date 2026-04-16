@@ -5,7 +5,8 @@ import GlowCard from '../components/ui/GlowCard'
 import SectionTitle from '../components/ui/SectionTitle'
 import StatBadge from '../components/ui/StatBadge'
 import MonoValue from '../components/ui/MonoValue'
-import { usePoolData, useLivePrice } from '../context/NexusContext'
+import SkeletonLoader from '../components/ui/SkeletonLoader'
+import { usePoolData, useLivePrice, useNexus } from '../context/NexusContext'
 import { engine } from '../data/MockDataEngine'
 import type { Pool } from '../data/MockDataEngine'
 
@@ -294,6 +295,7 @@ function ILCalculator({ pools }: { pools: Pool[] }) {
 function PoolLeaderboard({ pools }: { pools: Pool[] }) {
   const sorted = [...pools].sort((a, b) => b.aprRaw - a.aprRaw)
   const maxApr = sorted[0]?.aprRaw ?? 1
+  const { isInitializing } = useNexus()
 
   // Track previous ranks to show movement indicators
   const prevRanks = useRef<Record<string, number>>({})
@@ -305,12 +307,21 @@ function PoolLeaderboard({ pools }: { pools: Pool[] }) {
     sorted.forEach((p, i) => {
       currentRanks[p.name] = i
       if (prevRanks.current[p.name] !== undefined) {
-        newMovements[p.name] = prevRanks.current[p.name] - i // >0 means moved up (lower index)
+        newMovements[p.name] = prevRanks.current[p.name] - i
       }
     })
     setMovements(newMovements)
     prevRanks.current = currentRanks
-  }, [sorted.map(p => p.name).join()]) // depends on order, not values
+  }, [sorted.map(p => p.name).join()])
+
+  if (isInitializing) {
+    return (
+      <GlowCard delay={0.4} className="p-6">
+        <SectionTitle title="Top Pools by Fee APR" dotColor="var(--purple)" />
+        <div className="mt-5"><SkeletonLoader type="row" count={6} /></div>
+      </GlowCard>
+    )
+  }
 
   return (
     <GlowCard delay={0.4} className="p-6">
@@ -369,6 +380,7 @@ function PoolLeaderboard({ pools }: { pools: Pool[] }) {
 export default function LiquidityPage() {
   const pools  = usePoolData()
   const maxTvl = Math.max(...pools.map(p => p.tvl), 1)
+  const { isInitializing } = useNexus()
 
   return (
     <div className="space-y-6">
@@ -385,9 +397,12 @@ export default function LiquidityPage() {
           </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-2">
-          {pools.map((pool, i) => (
-            <PoolCard key={pool.name} pool={pool} i={i} maxTvl={maxTvl} />
-          ))}
+          {isInitializing
+            ? <SkeletonLoader type="card" count={6} />
+            : pools.map((pool, i) => (
+                <PoolCard key={pool.name} pool={pool} i={i} maxTvl={maxTvl} />
+              ))
+          }
         </div>
       </div>
 
