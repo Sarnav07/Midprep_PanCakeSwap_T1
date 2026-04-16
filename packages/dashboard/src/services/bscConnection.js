@@ -2,6 +2,7 @@ import { ethers } from 'ethers'
 
 const RPC_PRIMARY   = 'https://data-seed-prebsc-1-s1.binance.org:8545/'
 const RPC_BACKUP    = 'https://data-seed-prebsc-2-s1.binance.org:8545/'
+const RPC_PUBLIC    = 'https://bsc-testnet-rpc.publicnode.com'
 const ROUTER_V2     = '0xD99D1c33F9fC3444f8101754aBC46c52416550D1'
 const WBNB          = '0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd'
 const BUSD          = '0xeD24FC36d5Ee211Ea25A80239Fb8C4Cfd80f12Ee'
@@ -17,18 +18,40 @@ const PAIR_ABI = [
 let _provider = null
 let _bnbPriceCache = { value: null, ts: 0 }
 
+const TIMEOUT_MS = 5000
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('RPC timeout')), ms))
+  ])
+}
+
+async function tryRpc(url) {
+  const p = new ethers.JsonRpcProvider(url)
+  await withTimeout(p.getBlockNumber(), TIMEOUT_MS)
+  return p
+}
+
 export async function getProvider() {
   if (_provider) return _provider
-  try {
-    _provider = new ethers.JsonRpcProvider(RPC_PRIMARY)
-    await _provider.getBlockNumber()
-    console.log('✓ Connected to BSC Testnet (Chain ID: 97)')
-    return _provider
-  } catch {
-    console.warn('Primary RPC failed, trying backup...')
-    _provider = new ethers.JsonRpcProvider(RPC_BACKUP)
-    return _provider
+  for (const [url, label] of [
+    [RPC_PRIMARY, 'primary'],
+    [RPC_BACKUP,  'backup'],
+    [RPC_PUBLIC,  'publicnode'],
+  ]) {
+    try {
+      _provider = await tryRpc(url)
+      console.log(`✓ Connected to BSC Testnet (Chain ID: 97) via ${label}`)
+      return _provider
+    } catch (e) {
+      console.warn(`RPC ${label} failed: ${e.message}`)
+    }
   }
+  // All RPCs failed — return a provider anyway (calls will fail gracefully)
+  console.error('All BSC Testnet RPCs unavailable. Using publicnode as last resort.')
+  _provider = new ethers.JsonRpcProvider(RPC_PUBLIC)
+  return _provider
 }
 
 export async function getBNBPrice() {

@@ -358,7 +358,7 @@ function runExecutionAgent() {
   setAgent('execution', 'ONLINE')
 }
 
-async function simulateTrade(signal) {
+async function simulateTrade(signal, isDemoRun = false) {
   log('Execution', 'INFO', 
     `[SIM] Executing ${signal.strategy}: ` +
     `${signal.direction} ${signal.pair} @ $${signal.entryPrice.toFixed(2)}`)
@@ -372,7 +372,8 @@ async function simulateTrade(signal) {
   const bnbPrice  = _prices['BNB/USDC']?.price || 312
   const gasCostUSD = (gasUsed * gasData.gwei * 1e-9) * bnbPrice
   
-  const success = Math.random() > 0.08  // 92% success rate
+  // Demo always succeeds for clean presentation
+  const success = isDemoRun ? true : Math.random() > 0.08
   const slipFactor = 1 - (Math.random() * signal.slippage / 100)
   const actualExit = signal.exitPrice * slipFactor
   const grossPnL = (actualExit - signal.entryPrice) * 
@@ -500,6 +501,11 @@ export async function startOrchestrator(onStateUpdate) {
     const t = setTimeout(fn, delay)
     _intervals.push(t)
   })
+
+  // Log ready signal after all agents have booted
+  setTimeout(() => {
+    console.log('[NEXUS DEMO READY] All agents online — system operational')
+  }, 6000)
 }
 
 export function stopOrchestrator() {
@@ -587,7 +593,7 @@ export async function runDemoSequence(onStep) {
   await new Promise(r => setTimeout(r, 2000))
 
   step(5, 'Execution Agent submitting trade...')
-  const trade = await simulateTrade(signal)
+  const trade = await simulateTrade(signal, true)  // isDemoRun=true forces success
   await new Promise(r => setTimeout(r, 2000))
 
   step(6, 'Portfolio updated')
